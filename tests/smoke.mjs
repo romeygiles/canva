@@ -69,7 +69,7 @@ await page.evaluate(() => document.querySelectorAll('details').forEach(d => { d.
 console.log('\ncards & invites — smoke test\n');
 
 await check('the preview renders text', () => page.locator('#stage svg text').count().then(n => n > 3));
-await check('every template has a thumbnail', () => page.locator('.tpl svg').count().then(n => n === 8));
+await check('every template has a thumbnail', () => page.locator('.tpl svg').count().then(n => n === 12));
 await check('a card template hides the event fields', () => page.locator('[data-field="date"]').count().then(n => n === 0));
 
 await page.click('[data-template="wedding-elegant"]');
@@ -151,7 +151,8 @@ const pdf = await page.evaluate(async () => {
   const realCreate = URL.createObjectURL;
   URL.createObjectURL = blob => { captured.push(blob); return realCreate.call(URL, blob); };
   try {
-    await downloadPDF(renderSVG(stateFromTemplate('wedding-elegant')), 'test');
+    await downloadPDF(renderSVG(stateFromTemplate('wedding-elegant')), 'test',
+      { w: 2000, h: 2800 }, { w: 360, h: 504 });
   } finally {
     URL.createObjectURL = realCreate;
   }
@@ -189,6 +190,81 @@ await check('the image is full resolution rgb', () =>
   pdf.dict.includes('/Width 2000') && pdf.dict.includes('/Height 2800') && pdf.dict.includes('/DeviceRGB'));
 await check('the image is losslessly compressed', () => pdf.dict.includes('/FlateDecode'));
 await check('compression actually shrank the pixels', () => pdf.size < 2000 * 2800 * 3 * 0.5);
+
+/* ── mugs ── */
+
+await page.click('[data-template="mug-first-coffee"]');
+await page.evaluate(() => document.querySelectorAll('details').forEach(d => { d.open = true; }));
+
+await check('a mug uses the wide artboard', () =>
+  page.locator('#stage svg').getAttribute('viewBox').then(v => v === '0 0 2475 1155'));
+// innerText reports the rendered text, and the labels are uppercased in CSS.
+await check('the mug quote field is labelled as a quote', () =>
+  page.locator('#fields .field span').allInnerTexts()
+    .then(t => t.some(s => s.toLowerCase() === 'quote')));
+await check('the product panel appears for mugs', () => page.locator('#group-product').isVisible());
+await check('mugs offer both sizes', () => page.locator('#surface option').count().then(n => n === 2));
+await check('mugs hide the pdf and print buttons', async () =>
+  !(await page.locator('#btn-pdf').isVisible()) && !(await page.locator('#btn-print').isVisible()));
+await check('the arch decoration is withheld from mugs', () =>
+  page.locator('#decor option').evaluateAll(o => !o.some(x => x.value === 'arch')));
+
+await check('switching to 15 oz resizes the artboard', async () => {
+  await page.selectOption('#surface', 'mug15');
+  const box = await page.locator('#stage svg').getAttribute('viewBox');
+  await page.selectOption('#surface', 'mug11');
+  return box === '0 0 2775 1320';
+});
+
+await check('guides are drawn in the editor', () => page.locator('#stage svg [data-guides]').count().then(n => n === 1));
+
+// The single most costly bug this app could ship: a pink guide printed onto a mug.
+await check('guides never reach an export', () => page.evaluate(async () => {
+  const { renderSVG } = await import('./src/render.js');
+  const { stateFromTemplate } = await import('./src/templates.js');
+  const design = stateFromTemplate('mug-first-coffee');
+  return !renderSVG(design).includes('data-guides')
+    && !renderSVG(design).includes('e5007d')
+    && renderSVG(design, { guides: true }).includes('data-guides');
+}));
+
+await check('text keeps clear of the handle zone', async () => {
+  const boxes = await page.locator('#stage svg text').evaluateAll(nodes =>
+    nodes.map(n => n.getBBox()).map(b => ({ left: b.x, right: b.x + b.width })));
+  // safe.x for an 11 oz mug is 330, which already excludes the 170px handle strip.
+  return boxes.length > 0 && boxes.every(b => b.left >= 330 && b.right <= 2475 - 330);
+});
+
+await check('a transparent mug drops the background', async () => {
+  await page.check('#transparent');
+  const html = await page.locator('#stage svg').innerHTML();
+  const opaque = await page.uncheck('#transparent').then(() => page.locator('#stage svg').innerHTML());
+  return !/<rect width="2475" height="1155"/.test(html) && /<rect width="2475" height="1155"/.test(opaque);
+});
+
+await check('a mug exports at the print template size', () => page.evaluate(async () => {
+  const { renderSVG } = await import('./src/render.js');
+  const { stateFromTemplate } = await import('./src/templates.js');
+  const { surfaceById } = await import('./src/surfaces.js');
+  const S = surfaceById('mug11');
+  const image = new Image();
+  image.src = `data:image/svg+xml;charset=utf-8,${encodeURIComponent(renderSVG(stateFromTemplate('mug-first-coffee')))}`;
+  await image.decode();
+  const canvas = document.createElement('canvas');
+  canvas.width = S.out.w;
+  canvas.height = S.out.h;
+  canvas.getContext('2d').drawImage(image, 0, 0, canvas.width, canvas.height);
+  return canvas.width === 2475 && canvas.height === 1155 && canvas.toDataURL('image/png').length > 5000;
+}));
+
+await check('cards still use the portrait artboard', async () => {
+  await page.click('[data-template="birthday-confetti"]');
+  const box = await page.locator('#stage svg').getAttribute('viewBox');
+  return box === '0 0 1000 1400';
+});
+await check('the pdf button returns for cards', () => page.locator('#btn-pdf').isVisible());
+await check('cards do not offer the invite email button', () =>
+  page.locator('#btn-mail').isVisible().then(v => v === false));
 
 await check('nothing logged an error', () => consoleErrors.length === 0);
 if (consoleErrors.length) console.log(consoleErrors.map(e => `       ${e}`).join('\n'));

@@ -58,8 +58,17 @@ export const INVITE_FIELDS = [
   { key: 'signoff',  label: 'Sign-off',          type: 'text',     max: 60 },
 ];
 
+export const MUG_FIELDS = [
+  { key: 'eyebrow',  label: 'Small line on top', type: 'text',     max: 40 },
+  { key: 'headline', label: 'Quote',             type: 'textarea', max: 120 },
+  { key: 'message',  label: 'Second line',       type: 'text',     max: 80 },
+  { key: 'signoff',  label: 'Attribution',       type: 'text',     max: 60 },
+];
+
 export function fieldsFor(kind) {
-  return kind === 'invite' ? INVITE_FIELDS : CARD_FIELDS;
+  if (kind === 'invite') return INVITE_FIELDS;
+  if (kind === 'mug') return MUG_FIELDS;
+  return CARD_FIELDS;
 }
 
 export const TEMPLATES = [
@@ -197,18 +206,91 @@ export const TEMPLATES = [
   },
 ];
 
+/* ── mugs ──
+ *
+ * Mug designs are quote-led, so the headline field carries the quote and the
+ * other fields are optional trimmings. Keep the wording generic or your own —
+ * quotations still in copyright are not yours to print and sell.
+ */
+export const MUG_TEMPLATES = [
+  {
+    id: 'mug-first-coffee',
+    name: 'But first',
+    kind: 'mug',
+    palette: 'cream',
+    decor: 'dots',
+    fonts: { heading: 'futura', body: 'helvetica' },
+    transparent: false,
+    fields: {
+      eyebrow: '',
+      headline: 'But first, coffee',
+      message: '',
+      signoff: '',
+    },
+  },
+  {
+    id: 'mug-good-day',
+    name: 'Good day',
+    kind: 'mug',
+    palette: 'party',
+    decor: 'confetti',
+    fonts: { heading: 'futura', body: 'helvetica' },
+    transparent: false,
+    fields: {
+      eyebrow: 'Reminder',
+      headline: 'Today is a good day for a good day',
+      message: '',
+      signoff: '',
+    },
+  },
+  {
+    id: 'mug-slow-morning',
+    name: 'Slow morning',
+    kind: 'mug',
+    palette: 'sage',
+    decor: 'bloom',
+    fonts: { heading: 'script', body: 'optima' },
+    transparent: false,
+    fields: {
+      eyebrow: '',
+      headline: 'Slow mornings & strong coffee',
+      message: 'no plans, no rush',
+      signoff: '',
+    },
+  },
+  {
+    id: 'mug-okayest',
+    name: 'Okayest',
+    kind: 'mug',
+    palette: 'midnight',
+    decor: 'stripes',
+    fonts: { heading: 'didot', body: 'helvetica' },
+    transparent: false,
+    fields: {
+      eyebrow: 'Officially the',
+      headline: 'World’s okayest colleague',
+      message: '',
+      signoff: 'award pending',
+    },
+  },
+];
+
+TEMPLATES.push(...MUG_TEMPLATES);
+
 export const paletteById = id => PALETTES.find(p => p.id === id) || PALETTES[0];
 export const templateById = id => TEMPLATES.find(t => t.id === id) || TEMPLATES[0];
 export const fontStack = id => (FONTS.find(f => f.id === id) || FONTS[0]).stack;
 
 /** Build a fresh editor state from a template. */
-export function stateFromTemplate(id) {
+export function stateFromTemplate(id, surface) {
   const t = templateById(id);
   const p = paletteById(t.palette);
   return {
     templateId: t.id,
     kind: t.kind,
+    surface: surface || (t.kind === 'mug' ? 'mug11' : 'card'),
     decor: t.decor,
+    transparent: Boolean(t.transparent),
     fonts: { ...t.fonts },
     colors: { bg: p.bg, ink: p.ink, accent: p.accent, soft: p.soft },
     fields: { ...t.fields },

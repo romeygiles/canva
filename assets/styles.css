@@ -27,6 +27,10 @@
 
 * { box-sizing: border-box; }
 
+/* A class like .btn { display: inline-flex } outranks the browser's own
+   [hidden] { display: none }, so state it explicitly. */
+[hidden] { display: none !important; }
+
 body {
   margin: 0;
   background: var(--bg);
@@ -148,6 +152,17 @@ input[type="color"] {
   cursor: pointer;
 }
 
+.check {
+  display: grid;
+  grid-template-columns: auto 1fr;
+  gap: 9px;
+  align-items: start;
+  font-size: 14px;
+  cursor: pointer;
+}
+.check input { margin: 3px 0 0; width: 15px; height: 15px; accent-color: var(--brand); }
+.check small { color: var(--ink-soft); }
+
 .counter { font-size: 11px; color: var(--ink-soft); justify-self: end; }
 .counter.is-over { color: #b4472f; font-weight: 600; }
 
@@ -238,12 +253,19 @@ input[type="color"] {
 .stage {
   width: 100%;
   max-width: 500px;
-  aspect-ratio: 5 / 7;
+  aspect-ratio: 5 / 7;          /* replaced per surface from JS */
   border-radius: 4px;
   box-shadow: var(--shadow);
   overflow: hidden;
-  background: var(--surface);
+  /* A chequerboard, so a transparent design reads as transparent. */
+  background-color: #fff;
+  background-image:
+    linear-gradient(45deg, #e6e2db 25%, transparent 25%, transparent 75%, #e6e2db 75%),
+    linear-gradient(45deg, #e6e2db 25%, transparent 25%, transparent 75%, #e6e2db 75%);
+  background-size: 20px 20px;
+  background-position: 0 0, 10px 10px;
 }
+.stage.is-wide { max-width: 100%; }
 .stage svg { display: block; width: 100%; height: 100%; }
 
 .export { display: flex; gap: 8px; flex-wrap: wrap; justify-content: center; }

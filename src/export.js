@@ -1,9 +1,7 @@
 // Turning the rendered SVG into files the user can keep.
 
-import { CARD_W, CARD_H } from './render.js';
-
-/** 300 dpi at 5×7 inches = 1500×2100; we go a touch higher at 2× the artboard. */
-const SCALE = 2;
+// Export sizes come from the surface (see src/surfaces.js) so a card exports at
+// 2x its artboard while a mug exports 1:1 onto the print template's pixel grid.
 
 function download(blob, filename) {
   const url = URL.createObjectURL(blob);
@@ -33,10 +31,10 @@ export function downloadSVG(svg, name) {
 }
 
 /** Draw the SVG onto a canvas at export resolution. */
-async function rasterise(svg) {
+async function rasterise(svg, out) {
   const canvas = document.createElement('canvas');
-  canvas.width = CARD_W * SCALE;
-  canvas.height = CARD_H * SCALE;
+  canvas.width = out.w;
+  canvas.height = out.h;
 
   const image = new Image();
   // A data URL keeps the canvas untainted, so toBlob() and getImageData() are allowed.
@@ -51,30 +49,28 @@ async function rasterise(svg) {
   return canvas;
 }
 
-export async function downloadPNG(svg, name) {
-  const canvas = await rasterise(svg);
+export async function downloadPNG(svg, name, out) {
+  const canvas = await rasterise(svg, out);
   const blob = await new Promise(resolve => canvas.toBlob(resolve, 'image/png'));
   if (!blob) throw new Error('The PNG could not be created.');
   download(blob, `${name}.png`);
 }
 
-export async function downloadPDF(svg, name) {
-  const canvas = await rasterise(svg);
-  download(new Blob([await buildPDF(canvas, name)], { type: 'application/pdf' }), `${name}.pdf`);
+export async function downloadPDF(svg, name, out, page) {
+  const canvas = await rasterise(svg, out);
+  download(new Blob([await buildPDF(canvas, name, page)], { type: 'application/pdf' }), `${name}.pdf`);
 }
 
 /* ───────────────────────── pdf ─────────────────────────
  *
  * A single-page PDF holding one full-bleed image, written by hand so the app
- * stays dependency-free. The page is 5 x 7 inches at 72 pt/inch, and the image
- * is the full-resolution raster, so the effective output is 400 dpi.
+ * stays dependency-free. The page is measured in points (72 to the inch) and the
+ * image is the full-resolution raster, so a 5 x 7 page carrying 2000 x 2800
+ * pixels comes out at 400 dpi.
  *
  * The pixels go in losslessly: raw RGB compressed with zlib via CompressionStream,
  * which is exactly what a /FlateDecode stream expects.
  */
-
-const PAGE_W = 5 * 72;
-const PAGE_H = 7 * 72;
 
 async function deflate(bytes) {
   if (typeof CompressionStream === 'undefined') return null;
@@ -87,7 +83,9 @@ function pdfString(text) {
   return String(text).replace(/[^\x20-\x7e]/g, '').replace(/[\\()]/g, '\\$&');
 }
 
-async function buildPDF(canvas, title) {
+async function buildPDF(canvas, title, page) {
+  const PAGE_W = page.w;
+  const PAGE_H = page.h;
   const { width, height } = canvas;
   const rgba = canvas.getContext('2d').getImageData(0, 0, width, height).data;
 

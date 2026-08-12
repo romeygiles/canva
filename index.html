@@ -3,15 +3,15 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<title>Cards &amp; Invites</title>
-<meta name="description" content="Design printable greeting cards and party invitations in the browser.">
+<title>Cards, Invites &amp; Mugs</title>
+<meta name="description" content="Design printable greeting cards, party invitations and mug wraps in the browser.">
 <link rel="stylesheet" href="assets/styles.css">
 <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>💌</text></svg>">
 </head>
 <body>
 
 <header class="topbar">
-  <h1 class="wordmark">Cards <span>&amp;</span> Invites</h1>
+  <h1 class="wordmark">Cards, Invites <span>&amp;</span> Mugs</h1>
   <div class="topbar-actions">
     <button type="button" id="btn-share" class="btn btn-ghost">Copy share link</button>
     <button type="button" id="btn-reset" class="btn btn-ghost">Reset</button>
@@ -30,6 +30,7 @@
           <button type="button" class="chip is-on" data-filter="all" role="tab">All</button>
           <button type="button" class="chip" data-filter="card" role="tab">Cards</button>
           <button type="button" class="chip" data-filter="invite" role="tab">Invites</button>
+          <button type="button" class="chip" data-filter="mug" role="tab">Mugs</button>
         </div>
         <div id="gallery" class="gallery"></div>
       </div>
@@ -38,6 +39,24 @@
     <details class="group" open>
       <summary>Words</summary>
       <div class="group-body" id="fields"></div>
+    </details>
+
+    <details class="group" id="group-product" open hidden>
+      <summary>Product</summary>
+      <div class="group-body">
+        <label class="field">
+          <span>Mug size</span>
+          <select id="surface"></select>
+        </label>
+        <label class="check">
+          <input type="checkbox" id="transparent">
+          <span>Transparent background <small>— unprinted areas show the bare mug</small></span>
+        </label>
+        <label class="check">
+          <input type="checkbox" id="show-guides" checked>
+          <span>Show print guides <small>— editor only, never exported</small></span>
+        </label>
+      </div>
     </details>
 
     <details class="group">
@@ -97,7 +116,7 @@
       <button type="button" id="btn-print" class="btn">Print</button>
       <a id="btn-mail" class="btn" href="#" hidden>Email the invite</a>
     </div>
-    <p class="hint">5&nbsp;&times;&nbsp;7&nbsp;inches at 400&nbsp;dpi &mdash; 2000&nbsp;&times;&nbsp;2800&nbsp;px. The PDF is print-ready.</p>
+    <p class="hint" id="export-note"></p>
   </section>
 
 </main>

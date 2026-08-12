@@ -1,22 +1,25 @@
-# Cards &amp; Invites
+# Cards, Invites &amp; Mugs
 
-A small browser app for designing greeting cards and party invitations, then
-exporting them as a print-ready PNG, an SVG, or a PDF via the print dialog.
+A small browser app for designing greeting cards, party invitations and mug
+wraps, then exporting them ready for printing or for a print-on-demand service.
 
 No build step, no framework, no dependencies at runtime — open `index.html`
 through any static server and it works.
 
 ## What it does
 
-- **Eight starting templates** — four cards (birthday, thank you, congratulations,
-  seasonal) and four invitations (garden party, dinner, baby shower, wedding).
+- **Twelve starting templates** — four cards (birthday, thank you,
+  congratulations, seasonal), four invitations (garden party, dinner, baby
+  shower, wedding) and four mug quotes.
 - **Edit the words** in a plain form. Invitations get date, time, venue, address
-  and RSVP fields; cards get a message and a sign-off.
+  and RSVP fields; cards get a message and a sign-off; mugs get a quote and an
+  attribution.
 - **Change the look** — eight colour sets plus per-colour overrides, eight
   decorations (frame, arch, confetti, botanical, stripes, dots, sunburst, none)
   and nine font pairings.
-- **Export** a print-ready PDF or a 2000 × 2800 px PNG — both 5 × 7 inches at
-  400 dpi — plus the SVG source, or print straight from the browser.
+- **Export** a print-ready PDF or a 2000 × 2800 px PNG for cards — both 5 × 7
+  inches at 400 dpi — or a mug wrap PNG sized to the print template, plus the
+  SVG source in every case.
 - **Share a design as a link** — the whole design is encoded in the URL, so
   nothing is stored on a server. Invitations also get a prefilled email.
 - Work in progress is kept in `localStorage`, so a reload does not lose it.
@@ -40,7 +43,7 @@ The site is served straight from the repository by GitHub Pages — there is
 nothing to build, so no workflow is involved. Under
 **Settings → Pages → Build and deployment**, set *Source* to **Deploy from a
 branch**, pick `main` and `/ (root)`, and press **Save**. Every push to `main`
-then republishes the site at `https://<user>.github.io/canva/`.
+then republishes the site at `https://<user>.github.io/<repo>/`.
 
 The empty `.nojekyll` file at the root tells Pages to serve the files verbatim
 instead of running them through Jekyll.
@@ -63,12 +66,13 @@ so a browser is the only place it can be checked honestly.
 | `index.html` | Page shell and the editor's static controls |
 | `assets/styles.css` | App styling, dark mode, and the 5 × 7 inch print sheet |
 | `src/templates.js` | Template catalogue, palettes, font stacks, field definitions |
+| `src/surfaces.js` | Artboard sizes, safe areas and mug handle zones |
 | `src/render.js` | Draws the design as an SVG string — wrapping, fitting, decorations |
 | `src/store.js` | `localStorage` persistence and the share-link encoding |
 | `src/export.js` | PDF / PNG / SVG download and the `mailto:` builder |
 | `src/app.js` | Wires the DOM to the state and redraws on every change |
 
-The card is rendered as **one SVG document**, and the preview, the print sheet
+The design is rendered as **one SVG document**, and the preview, the print sheet
 and the PNG export all come from that same string. Anything you see on screen is
 what lands in the exported file.
 
@@ -80,7 +84,7 @@ Append an entry to `TEMPLATES` in `src/templates.js`:
 {
   id: 'housewarming',            // unique; also seeds the decoration layout
   name: 'Housewarming',          // shown under the gallery thumbnail
-  kind: 'invite',                // 'invite' adds date/time/venue/RSVP fields
+  kind: 'invite',                // 'invite' adds date/time/venue/RSVP; 'mug' switches artboard
   palette: 'plum',               // an id from PALETTES
   decor: 'dots',                 // an id from DECORS
   fonts: { heading: 'didot', body: 'optima' },
@@ -90,6 +94,36 @@ Append an entry to `TEMPLATES` in `src/templates.js`:
 
 The gallery, the form and the thumbnail all follow from that — no other file
 needs touching.
+
+## Mugs and print-on-demand
+
+Mug designs are laid out on a flat wrap — the rectangle that gets printed and
+then curved around the mug.
+
+**Check the dimensions before you sell anything.** The sizes in
+`src/surfaces.js` are the common Printify figures, but the real numbers vary by
+print provider. Download the template for the provider you actually picked and
+compare. If it differs, change the numbers in that one file; nothing else needs
+touching.
+
+Three things the editor does for you:
+
+- **Handle guides.** The shaded strips at each end mark the part of the wrap the
+  handle covers. Text is laid out inside a safe box that already excludes them,
+  so you cannot accidentally type into a region nobody will see.
+- **A dashed safe box** showing where the text is allowed to sit.
+- **Transparent background.** Most mug printing is sublimation, where white is
+  simply *no ink* — unprinted areas show the bare ceramic. Tick the box and the
+  background is dropped from the export. The chequerboard behind the preview is
+  the editor telling you the area is transparent.
+
+Guides are an editing aid and are **never** included in an export — there is a
+test that fails if a guide ever reaches an exported file.
+
+What this does **not** do yet is bleed. The exports are exactly the print-area
+size with no overhang, which is right for digital printables and for print
+providers that expect a flat template, but not for a commercial printer that
+trims physical cards.
 
 ### A note on the PDF
 

@@ -4,6 +4,7 @@ import {
   TEMPLATES, PALETTES, FONTS, DECORS,
   fieldsFor, stateFromTemplate, paletteById,
 } from './templates.js';
+import { surfaceById, sizesFor } from './surfaces.js';
 import { renderSVG, renderThumb } from './render.js';
 import { downloadPDF, downloadPNG, downloadSVG, mailtoLink, slugify } from './export.js';
 import * as store from './store.js';
@@ -18,10 +19,18 @@ const el = {
   decor:    $('#decor'),
   heading:  $('#font-heading'),
   bodyFont: $('#font-body'),
+  product:  $('#group-product'),
+  surface:  $('#surface'),
+  transparent: $('#transparent'),
+  showGuides:  $('#show-guides'),
   stage:    $('#stage'),
   mail:     $('#btn-mail'),
+  note:     $('#export-note'),
   toast:    $('#toast'),
 };
+
+// An arch is a portrait shape; it has nothing to say on a mug wrap.
+const decorsFor = kind => DECORS.filter(d => kind !== 'mug' || d.id !== 'arch');
 
 let state = store.readFromHash() || store.load() || stateFromTemplate(TEMPLATES[0].id);
 let filter = 'all';
@@ -102,9 +111,20 @@ function updateCounter(def) {
 /* ───────────────────────── render loop ───────────────────────── */
 
 function syncControls() {
-  el.decor.value = state.decor;
+  const isMug = state.kind === 'mug';
+
+  fillSelect(el.decor, decorsFor(state.kind), state.decor);
   el.heading.value = state.fonts.heading;
   el.bodyFont.value = state.fonts.body;
+
+  el.product.hidden = !isMug;
+  el.transparent.checked = Boolean(state.transparent);
+  if (isMug) fillSelect(el.surface, sizesFor('mug'), state.surface);
+
+  // A mug wrap is printed flat, so there is nothing to print at home and no PDF
+  // that a print-on-demand service would want.
+  $('#btn-pdf').hidden = isMug;
+  $('#btn-print').hidden = isMug;
 
   for (const input of document.querySelectorAll('[data-color]')) {
     input.value = state.colors[input.dataset.color];
@@ -123,7 +143,15 @@ function syncControls() {
 }
 
 function draw() {
-  el.stage.innerHTML = renderSVG(state);
+  const S = surfaceById(state.surface);
+
+  el.stage.style.aspectRatio = `${S.w} / ${S.h}`;
+  el.stage.classList.toggle('is-wide', S.kind === 'mug');
+  el.stage.innerHTML = renderSVG(state, { guides: el.showGuides.checked });
+
+  el.note.textContent = S.kind === 'mug'
+    ? `${S.name} — exports at ${S.out.w} × ${S.out.h} px, ${S.dpi} dpi. Check this against your print provider's template.`
+    : `${S.note} at ${S.dpi} dpi — ${S.out.w} × ${S.out.h} px. The PDF is print-ready.`;
 
   if (state.kind === 'invite') {
     el.mail.hidden = false;
@@ -184,6 +212,10 @@ for (const input of document.querySelectorAll('[data-color]')) {
   });
 }
 
+el.surface.addEventListener('change', () => update(s => { s.surface = el.surface.value; }));
+el.transparent.addEventListener('change', () => update(s => { s.transparent = el.transparent.checked; }));
+el.showGuides.addEventListener('change', draw);
+
 el.decor.addEventListener('change', () => update(s => { s.decor = el.decor.value; }));
 el.heading.addEventListener('change', () => update(s => { s.fonts.heading = el.heading.value; }));
 el.bodyFont.addEventListener('change', () => update(s => { s.fonts.body = el.bodyFont.value; }));
@@ -216,7 +248,8 @@ function wireExport(selector, run) {
     button.disabled = true;
     button.textContent = 'Working…';
     try {
-      await run(renderSVG(state), slugify(state.fields.headline, state.kind));
+      // Deliberately rendered without guides — they are an editing aid only.
+      await run(renderSVG(state), slugify(state.fields.headline, state.kind), surfaceById(state.surface));
     } catch (error) {
       toast(error.message);
     } finally {
@@ -226,9 +259,9 @@ function wireExport(selector, run) {
   });
 }
 
-wireExport('#btn-pdf', downloadPDF);
-wireExport('#btn-png', downloadPNG);
-wireExport('#btn-svg', downloadSVG);
+wireExport('#btn-pdf', (svg, name, S) => downloadPDF(svg, name, S.out, { w: 5 * 72, h: 7 * 72 }));
+wireExport('#btn-png', (svg, name, S) => downloadPNG(svg, name, S.out));
+wireExport('#btn-svg', (svg, name) => downloadSVG(svg, name));
 
 $('#btn-print').addEventListener('click', () => window.print());
 
@@ -240,10 +273,17 @@ function normalise(candidate) {
   const known = TEMPLATES.find(t => t.id === candidate.templateId);
   if (!known) return stateFromTemplate(TEMPLATES[0].id);
   const base = stateFromTemplate(known.id);
+
+  // A surface only counts if it belongs to this template's product.
+  const allowed = sizesFor(known.kind === 'mug' ? 'mug' : 'print').map(s => s.id);
+  const surface = allowed.includes(candidate.surface) ? candidate.surface : base.surface;
+
   return {
     templateId: known.id,
     kind: known.kind,
-    decor: DECORS.some(d => d.id === candidate.decor) ? candidate.decor : base.decor,
+    surface,
+    transparent: Boolean(candidate.transparent),
+    decor: decorsFor(known.kind).some(d => d.id === candidate.decor) ? candidate.decor : base.decor,
     fonts: {
       heading: FONTS.some(f => f.id === candidate.fonts?.heading) ? candidate.fonts.heading : base.fonts.heading,
       body: FONTS.some(f => f.id === candidate.fonts?.body) ? candidate.fonts.body : base.fonts.body,
@@ -255,7 +295,6 @@ function normalise(candidate) {
 
 state = normalise(state);
 
-fillSelect(el.decor, DECORS, state.decor);
 fillSelect(el.heading, FONTS, state.fonts.heading);
 fillSelect(el.bodyFont, FONTS, state.fonts.body);
 buildPalettes();
