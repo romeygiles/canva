@@ -332,6 +332,10 @@ function buildBlocks(state, S) {
       { lineHeight: 1.45, gap: 46 * t, opacity: 0.75, width: column }));
   }
 
+  // A rule divides two things. With nothing below it — a bare quote on a mug, an
+  // invitation with no RSVP — it is just a dash hanging off the bottom.
+  while (blocks.length && blocks[blocks.length - 1].type === 'rule') blocks.pop();
+
   return blocks;
 }
 

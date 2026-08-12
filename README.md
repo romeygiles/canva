@@ -8,9 +8,11 @@ through any static server and it works.
 
 ## What it does
 
-- **Twelve starting templates** — four cards (birthday, thank you,
+- **Fourteen starting templates** — four cards (birthday, thank you,
   congratulations, seasonal), four invitations (garden party, dinner, baby
-  shower, wedding) and four mug quotes.
+  shower, wedding) and six mug styles.
+- **A quote library** of two dozen lines, grouped by theme, that can be dropped
+  onto any mug style in one click.
 - **Edit the words** in a plain form. Invitations get date, time, venue, address
   and RSVP fields; cards get a message and a sign-off; mugs get a quote and an
   attribution.
@@ -66,6 +68,7 @@ so a browser is the only place it can be checked honestly.
 | `index.html` | Page shell and the editor's static controls |
 | `assets/styles.css` | App styling, dark mode, and the 5 × 7 inch print sheet |
 | `src/templates.js` | Template catalogue, palettes, font stacks, field definitions |
+| `src/quotes.js` | The quote library, grouped by theme |
 | `src/surfaces.js` | Artboard sizes, safe areas and mug handle zones |
 | `src/render.js` | Draws the design as an SVG string — wrapping, fitting, decorations |
 | `src/store.js` | `localStorage` persistence and the share-link encoding |
@@ -94,6 +97,24 @@ Append an entry to `TEMPLATES` in `src/templates.js`:
 
 The gallery, the form and the thumbnail all follow from that — no other file
 needs touching.
+
+## Styles and quotes are separate
+
+A mug template is a **look** — palette, fonts, decoration. A quote is **words**.
+They live apart on purpose, in `src/templates.js` and `src/quotes.js`, and any
+quote can be dropped onto any style. Six styles and twenty-four lines is already
+144 designs without writing anything new.
+
+To add lines, append to a group in `src/quotes.js`:
+
+```js
+{ headline: 'The main line' },
+{ eyebrow: 'Small line above', headline: 'The main line' },
+{ headline: 'The setup', message: 'the punchline underneath' },
+```
+
+Anything a quote leaves out is cleared when it is applied, so a one-liner never
+strands the previous quote's punchline underneath it.
 
 ## Mugs and print-on-demand
 

@@ -5,6 +5,7 @@ import {
   fieldsFor, stateFromTemplate, paletteById,
 } from './templates.js';
 import { surfaceById, sizesFor } from './surfaces.js';
+import { QUOTE_GROUPS, ALL_QUOTES, fieldsFromQuote } from './quotes.js';
 import { renderSVG, renderThumb } from './render.js';
 import { downloadPDF, downloadPNG, downloadSVG, mailtoLink, slugify } from './export.js';
 import * as store from './store.js';
@@ -19,6 +20,9 @@ const el = {
   decor:    $('#decor'),
   heading:  $('#font-heading'),
   bodyFont: $('#font-body'),
+  quotes:      $('#group-quotes'),
+  quoteGroups: $('#quote-groups'),
+  quoteList:   $('#quote-list'),
   product:  $('#group-product'),
   surface:  $('#surface'),
   transparent: $('#transparent'),
@@ -34,6 +38,7 @@ const decorsFor = kind => DECORS.filter(d => kind !== 'mug' || d.id !== 'arch');
 
 let state = store.readFromHash() || store.load() || stateFromTemplate(TEMPLATES[0].id);
 let filter = 'all';
+let quoteFilter = 'all';
 
 /* ───────────────────────── toast ───────────────────────── */
 
@@ -67,6 +72,29 @@ function buildGallery() {
     <button type="button" class="tpl" data-template="${t.id}" aria-pressed="${t.id === state.templateId}">
       ${renderThumb(stateFromTemplate(t.id))}
       <b>${t.name}</b>
+    </button>`).join('');
+}
+
+/* ───────────────────────── quote library ───────────────────────── */
+
+const esc = s => String(s)
+  .replace(/&/g, '&amp;')
+  .replace(/</g, '&lt;')
+  .replace(/>/g, '&gt;')
+  .replace(/"/g, '&quot;');
+
+function buildQuoteGroups() {
+  const chips = [{ id: 'all', name: 'All' }, ...QUOTE_GROUPS];
+  el.quoteGroups.innerHTML = chips.map(g =>
+    `<button type="button" class="chip${g.id === quoteFilter ? ' is-on' : ''}" data-quote-group="${g.id}">${g.name}</button>`
+  ).join('');
+}
+
+function buildQuoteList() {
+  const shown = ALL_QUOTES.filter(q => quoteFilter === 'all' || q.group === quoteFilter);
+  el.quoteList.innerHTML = shown.map(q => `
+    <button type="button" class="quote" data-quote="${ALL_QUOTES.indexOf(q)}" aria-pressed="false">
+      ${q.eyebrow ? `<em>${esc(q.eyebrow)}</em>` : ''}${esc(q.headline)}${q.message ? `<em>${esc(q.message)}</em>` : ''}
     </button>`).join('');
 }
 
@@ -118,6 +146,12 @@ function syncControls() {
   el.bodyFont.value = state.fonts.body;
 
   el.product.hidden = !isMug;
+  el.quotes.hidden = !isMug;
+
+  for (const button of el.quoteList.querySelectorAll('[data-quote]')) {
+    const quote = ALL_QUOTES[Number(button.dataset.quote)];
+    button.setAttribute('aria-pressed', String(quote.headline === state.fields.headline));
+  }
   el.transparent.checked = Boolean(state.transparent);
   if (isMug) fillSelect(el.surface, sizesFor('mug'), state.surface);
 
@@ -190,6 +224,24 @@ el.filters.addEventListener('click', event => {
 el.gallery.addEventListener('click', event => {
   const button = event.target.closest('[data-template]');
   if (button) selectTemplate(button.dataset.template);
+});
+
+el.quoteGroups.addEventListener('click', event => {
+  const button = event.target.closest('[data-quote-group]');
+  if (!button) return;
+  quoteFilter = button.dataset.quoteGroup;
+  buildQuoteGroups();
+  buildQuoteList();
+  syncControls();
+});
+
+el.quoteList.addEventListener('click', event => {
+  const button = event.target.closest('[data-quote]');
+  if (!button) return;
+  const quote = ALL_QUOTES[Number(button.dataset.quote)];
+  update(s => { Object.assign(s.fields, fieldsFromQuote(quote)); });
+  buildFields();   // the form inputs hold their own values, so refresh them too
+  syncControls();
 });
 
 el.palettes.addEventListener('click', event => {
@@ -299,6 +351,8 @@ fillSelect(el.heading, FONTS, state.fonts.heading);
 fillSelect(el.bodyFont, FONTS, state.fonts.body);
 buildPalettes();
 buildGallery();
+buildQuoteGroups();
+buildQuoteList();
 buildFields();
 syncControls();
 draw();

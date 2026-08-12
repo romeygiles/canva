@@ -233,6 +233,30 @@ input[type="color"] {
 .tpl[aria-pressed="true"] { border-color: var(--brand); box-shadow: 0 0 0 2px var(--brand); }
 .tpl[aria-pressed="true"] b { color: var(--ink); }
 
+.quotes {
+  display: grid;
+  gap: 6px;
+  max-height: 340px;
+  overflow-y: auto;
+  padding-right: 4px;
+}
+
+.quote {
+  font: inherit;
+  font-size: 13px;
+  line-height: 1.4;
+  text-align: left;
+  color: var(--ink);
+  background: var(--bg);
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  padding: 8px 10px;
+  cursor: pointer;
+}
+.quote:hover { border-color: var(--ink-soft); }
+.quote[aria-pressed="true"] { border-color: var(--brand); box-shadow: inset 3px 0 0 var(--brand); }
+.quote em { display: block; font-size: 11px; color: var(--ink-soft); font-style: normal; }
+
 .swatches { display: flex; flex-wrap: wrap; gap: 8px; }
 .swatch {
   width: 34px; height: 34px;

@@ -69,7 +69,7 @@ await page.evaluate(() => document.querySelectorAll('details').forEach(d => { d.
 console.log('\ncards & invites — smoke test\n');
 
 await check('the preview renders text', () => page.locator('#stage svg text').count().then(n => n > 3));
-await check('every template has a thumbnail', () => page.locator('.tpl svg').count().then(n => n === 12));
+await check('every template has a thumbnail', () => page.locator('.tpl svg').count().then(n => n === 14));
 await check('a card template hides the event fields', () => page.locator('[data-field="date"]').count().then(n => n === 0));
 
 await page.click('[data-template="wedding-elegant"]');
@@ -193,7 +193,7 @@ await check('compression actually shrank the pixels', () => pdf.size < 2000 * 28
 
 /* ── mugs ── */
 
-await page.click('[data-template="mug-first-coffee"]');
+await page.click('[data-template="mug-bold"]');
 await page.evaluate(() => document.querySelectorAll('details').forEach(d => { d.open = true; }));
 
 await check('a mug uses the wide artboard', () =>
@@ -222,7 +222,7 @@ await check('guides are drawn in the editor', () => page.locator('#stage svg [da
 await check('guides never reach an export', () => page.evaluate(async () => {
   const { renderSVG } = await import('./src/render.js');
   const { stateFromTemplate } = await import('./src/templates.js');
-  const design = stateFromTemplate('mug-first-coffee');
+  const design = stateFromTemplate('mug-bold');
   return !renderSVG(design).includes('data-guides')
     && !renderSVG(design).includes('e5007d')
     && renderSVG(design, { guides: true }).includes('data-guides');
@@ -248,7 +248,7 @@ await check('a mug exports at the print template size', () => page.evaluate(asyn
   const { surfaceById } = await import('./src/surfaces.js');
   const S = surfaceById('mug11');
   const image = new Image();
-  image.src = `data:image/svg+xml;charset=utf-8,${encodeURIComponent(renderSVG(stateFromTemplate('mug-first-coffee')))}`;
+  image.src = `data:image/svg+xml;charset=utf-8,${encodeURIComponent(renderSVG(stateFromTemplate('mug-bold')))}`;
   await image.decode();
   const canvas = document.createElement('canvas');
   canvas.width = S.out.w;
@@ -256,6 +256,54 @@ await check('a mug exports at the print template size', () => page.evaluate(asyn
   canvas.getContext('2d').drawImage(image, 0, 0, canvas.width, canvas.height);
   return canvas.width === 2475 && canvas.height === 1155 && canvas.toDataURL('image/png').length > 5000;
 }));
+
+/* ── quote library ── */
+
+await check('the quote library is offered for mugs', () => page.locator('#group-quotes').isVisible());
+await check('every quote is listed', () => page.locator('.quote').count().then(n => n === 24));
+
+await check('the groups filter the list', async () => {
+  await page.click('[data-quote-group="fog"]');
+  const fogged = await page.locator('.quote').count();
+  await page.click('[data-quote-group="all"]');
+  return fogged === 4;
+});
+
+await check('clicking a quote redraws the design', async () => {
+  await page.click('[data-quote-group="reclaim"]');
+  await page.locator('.quote', { hasText: 'Estrogen left the chat' }).click();
+  // The headline wraps across several <text> lines, so match words, not the run.
+  // SVG elements have no innerText, hence textContent.
+  const drawn = await page.locator('#stage svg text')
+    .evaluateAll(nodes => nodes.map(n => n.textContent).join(' '));
+  const field = await page.inputValue('[data-field="headline"]');
+  return drawn.includes('Estrogen') && drawn.includes('stayed')
+    && field === 'Estrogen left the chat. I stayed.';
+});
+
+await check('a quote marks itself as chosen', () =>
+  page.locator('.quote[aria-pressed="true"]').count().then(n => n === 1));
+
+await check('a one-line quote clears the previous punchline', async () => {
+  await page.click('[data-quote-group="all"]');
+  await page.locator('.quote', { hasText: 'FSH levels' }).click();
+  const withSecond = await page.inputValue('[data-field="message"]');
+  await page.locator('.quote', { hasText: 'My patience left' }).click();
+  const after = await page.inputValue('[data-field="message"]');
+  return withSecond === 'Sense of humor: intact.' && after === '';
+});
+
+await check('quote typography survives the render', async () => {
+  await page.locator('.quote', { hasText: 'filed it under' }).click();
+  const svg = await page.locator('#stage svg').innerHTML();
+  // Curly quotes and apostrophes must reach the artboard unmangled.
+  return svg.includes('didn’t') && svg.includes('“later.”');
+});
+
+await check('cards do not offer the quote library', async () => {
+  await page.click('[data-template="birthday-confetti"]');
+  return !(await page.locator('#group-quotes').isVisible());
+});
 
 await check('cards still use the portrait artboard', async () => {
   await page.click('[data-template="birthday-confetti"]');
