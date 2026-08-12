@@ -36,12 +36,14 @@ Then visit <http://localhost:8080>.
 
 ## Publishing it
 
-The repo ships with a GitHub Actions workflow that publishes the site to GitHub
-Pages on every push to `main`. Turn it on once, under
-**Settings → Pages → Build and deployment → Source → GitHub Actions**. The site
-then lives at `https://<user>.github.io/canva/`.
+The site is served straight from the repository by GitHub Pages — there is
+nothing to build, so no workflow is involved. Under
+**Settings → Pages → Build and deployment**, set *Source* to **Deploy from a
+branch**, pick `main` and `/ (root)`, and press **Save**. Every push to `main`
+then republishes the site at `https://<user>.github.io/canva/`.
 
-There is nothing to build — the workflow uploads the folder as-is.
+The empty `.nojekyll` file at the root tells Pages to serve the files verbatim
+instead of running them through Jekyll.
 
 ## Tests
 
