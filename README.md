@@ -15,8 +15,8 @@ through any static server and it works.
 - **Change the look** — eight colour sets plus per-colour overrides, eight
   decorations (frame, arch, confetti, botanical, stripes, dots, sunburst, none)
   and nine font pairings.
-- **Export** a 2000 × 2800 px PNG (300 dpi at 5 × 7 inches), the SVG source, or
-  print straight to paper or PDF at the right page size.
+- **Export** a print-ready PDF or a 2000 × 2800 px PNG — both 5 × 7 inches at
+  400 dpi — plus the SVG source, or print straight from the browser.
 - **Share a design as a link** — the whole design is encoded in the URL, so
   nothing is stored on a server. Invitations also get a prefilled email.
 - Work in progress is kept in `localStorage`, so a reload does not lose it.
@@ -65,7 +65,7 @@ so a browser is the only place it can be checked honestly.
 | `src/templates.js` | Template catalogue, palettes, font stacks, field definitions |
 | `src/render.js` | Draws the design as an SVG string — wrapping, fitting, decorations |
 | `src/store.js` | `localStorage` persistence and the share-link encoding |
-| `src/export.js` | PNG / SVG download and the `mailto:` builder |
+| `src/export.js` | PDF / PNG / SVG download and the `mailto:` builder |
 | `src/app.js` | Wires the DOM to the state and redraws on every change |
 
 The card is rendered as **one SVG document**, and the preview, the print sheet
@@ -90,6 +90,18 @@ Append an entry to `TEMPLATES` in `src/templates.js`:
 
 The gallery, the form and the thumbnail all follow from that — no other file
 needs touching.
+
+### A note on the PDF
+
+`src/export.js` writes the PDF by hand — object table, cross-reference table
+and all — rather than pulling in a PDF library, which keeps the app
+dependency-free. It is one page, 360 × 504 pt (5 × 7 inches), holding a single
+full-bleed image at 2000 × 2800 px, so the effective resolution is 400 dpi.
+
+The pixels go in losslessly: raw RGB compressed with `CompressionStream('deflate')`,
+which produces exactly the zlib stream a PDF `/FlateDecode` filter expects. A
+typical card lands around 150 KB. On browsers without `CompressionStream` the
+image is embedded uncompressed instead — the file still opens, it is just large.
 
 ### A note on fonts
 

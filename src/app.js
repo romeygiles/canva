@@ -5,7 +5,7 @@ import {
   fieldsFor, stateFromTemplate, paletteById,
 } from './templates.js';
 import { renderSVG, renderThumb } from './render.js';
-import { downloadPNG, downloadSVG, mailtoLink, slugify } from './export.js';
+import { downloadPDF, downloadPNG, downloadSVG, mailtoLink, slugify } from './export.js';
 import * as store from './store.js';
 
 const $ = sel => document.querySelector(sel);
@@ -207,21 +207,28 @@ $('#btn-reset').addEventListener('click', () => {
   toast('Reset to the template defaults.');
 });
 
-$('#btn-svg').addEventListener('click', () => {
-  downloadSVG(renderSVG(state), slugify(state.fields.headline, state.kind));
-});
+// Rasterising and compressing a 2000 x 2800 page takes a moment, so the button
+// says so rather than looking dead.
+function wireExport(selector, run) {
+  const button = $(selector);
+  button.addEventListener('click', async () => {
+    const label = button.textContent;
+    button.disabled = true;
+    button.textContent = 'Working…';
+    try {
+      await run(renderSVG(state), slugify(state.fields.headline, state.kind));
+    } catch (error) {
+      toast(error.message);
+    } finally {
+      button.disabled = false;
+      button.textContent = label;
+    }
+  });
+}
 
-$('#btn-png').addEventListener('click', async event => {
-  const button = event.currentTarget;
-  button.disabled = true;
-  try {
-    await downloadPNG(renderSVG(state), slugify(state.fields.headline, state.kind));
-  } catch (error) {
-    toast(error.message);
-  } finally {
-    button.disabled = false;
-  }
-});
+wireExport('#btn-pdf', downloadPDF);
+wireExport('#btn-png', downloadPNG);
+wireExport('#btn-svg', downloadSVG);
 
 $('#btn-print').addEventListener('click', () => window.print());
 

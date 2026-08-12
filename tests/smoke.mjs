@@ -138,6 +138,58 @@ await check('the design rasterises to a png', () => page.evaluate(async () => {
   return canvas.toDataURL('image/png').length > 5000;
 }));
 
+// The PDF is assembled by hand, so the byte offsets in its cross-reference
+// table are the part most likely to be wrong — and a wrong table still opens in
+// forgiving viewers while failing in strict ones. Check it properly.
+const pdf = await page.evaluate(async () => {
+  const { renderSVG } = await import('./src/render.js');
+  const { stateFromTemplate } = await import('./src/templates.js');
+  const { downloadPDF } = await import('./src/export.js');
+
+  // Intercept the blob on its way to the download link rather than writing a file.
+  const captured = [];
+  const realCreate = URL.createObjectURL;
+  URL.createObjectURL = blob => { captured.push(blob); return realCreate.call(URL, blob); };
+  try {
+    await downloadPDF(renderSVG(stateFromTemplate('wedding-elegant')), 'test');
+  } finally {
+    URL.createObjectURL = realCreate;
+  }
+
+  const blob = captured[0];
+  const bytes = new Uint8Array(await blob.arrayBuffer());
+  const latin1 = new TextDecoder('latin1').decode(bytes);
+
+  // Every offset in the table must land exactly on its own "N 0 obj" header.
+  // Anchored on the newline, because "startxref" also ends in "xref".
+  const table = latin1.slice(latin1.lastIndexOf('\nxref\n'));
+  const rows = [...table.matchAll(/^(\d{10}) (\d{5}) n $/gm)].map(m => Number(m[1]));
+  const offsetsLandOnObjects = rows.length === 6
+    && rows.every((offset, i) => latin1.startsWith(`${i + 1} 0 obj`, offset));
+
+  const startxref = Number(latin1.match(/startxref\n(\d+)\n%%EOF/)?.[1]);
+
+  return {
+    type: blob.type,
+    size: bytes.length,
+    header: latin1.slice(0, 9),
+    endsCleanly: latin1.trimEnd().endsWith('%%EOF'),
+    offsetsLandOnObjects,
+    startxrefLandsOnTable: latin1.startsWith('xref', startxref),
+    dict: latin1.slice(0, 1024),
+  };
+});
+
+await check('the pdf is a real pdf', () => pdf.header === '%PDF-1.4\n' && pdf.type === 'application/pdf');
+await check('the pdf ends with %%EOF', () => pdf.endsCleanly);
+await check('every xref offset lands on its object', () => pdf.offsetsLandOnObjects);
+await check('startxref points at the xref table', () => pdf.startxrefLandsOnTable);
+await check('the page is 5x7 inches', () => pdf.dict.includes('/MediaBox [0 0 360 504]'));
+await check('the image is full resolution rgb', () =>
+  pdf.dict.includes('/Width 2000') && pdf.dict.includes('/Height 2800') && pdf.dict.includes('/DeviceRGB'));
+await check('the image is losslessly compressed', () => pdf.dict.includes('/FlateDecode'));
+await check('compression actually shrank the pixels', () => pdf.size < 2000 * 2800 * 3 * 0.5);
+
 await check('nothing logged an error', () => consoleErrors.length === 0);
 if (consoleErrors.length) console.log(consoleErrors.map(e => `       ${e}`).join('\n'));
 
