@@ -1,0 +1,108 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Cards &amp; Invites</title>
+<meta name="description" content="Design printable greeting cards and party invitations in the browser.">
+<link rel="stylesheet" href="assets/styles.css">
+<link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>💌</text></svg>">
+</head>
+<body>
+
+<header class="topbar">
+  <h1 class="wordmark">Cards <span>&amp;</span> Invites</h1>
+  <div class="topbar-actions">
+    <button type="button" id="btn-share" class="btn btn-ghost">Copy share link</button>
+    <button type="button" id="btn-reset" class="btn btn-ghost">Reset</button>
+  </div>
+</header>
+
+<main class="layout">
+
+  <!-- ───────────────── editor ───────────────── -->
+  <section class="panel" aria-label="Editor">
+
+    <details class="group" open>
+      <summary>Template</summary>
+      <div class="group-body">
+        <div class="filters" role="tablist" aria-label="Filter templates">
+          <button type="button" class="chip is-on" data-filter="all" role="tab">All</button>
+          <button type="button" class="chip" data-filter="card" role="tab">Cards</button>
+          <button type="button" class="chip" data-filter="invite" role="tab">Invites</button>
+        </div>
+        <div id="gallery" class="gallery"></div>
+      </div>
+    </details>
+
+    <details class="group" open>
+      <summary>Words</summary>
+      <div class="group-body" id="fields"></div>
+    </details>
+
+    <details class="group">
+      <summary>Look</summary>
+      <div class="group-body">
+        <label class="field">
+          <span>Colour set</span>
+          <div id="palettes" class="swatches"></div>
+        </label>
+
+        <div class="row">
+          <label class="field">
+            <span>Background</span>
+            <input type="color" id="c-bg" data-color="bg">
+          </label>
+          <label class="field">
+            <span>Text</span>
+            <input type="color" id="c-ink" data-color="ink">
+          </label>
+          <label class="field">
+            <span>Accent</span>
+            <input type="color" id="c-accent" data-color="accent">
+          </label>
+          <label class="field">
+            <span>Tint</span>
+            <input type="color" id="c-soft" data-color="soft">
+          </label>
+        </div>
+
+        <div class="row">
+          <label class="field">
+            <span>Decoration</span>
+            <select id="decor"></select>
+          </label>
+          <label class="field">
+            <span>Heading font</span>
+            <select id="font-heading"></select>
+          </label>
+          <label class="field">
+            <span>Body font</span>
+            <select id="font-body"></select>
+          </label>
+        </div>
+      </div>
+    </details>
+
+  </section>
+
+  <!-- ───────────────── preview ───────────────── -->
+  <section class="preview" aria-label="Preview">
+    <div id="stage" class="stage"></div>
+
+    <div class="export">
+      <button type="button" id="btn-png" class="btn btn-solid">Download PNG</button>
+      <button type="button" id="btn-svg" class="btn">Download SVG</button>
+      <button type="button" id="btn-print" class="btn">Print / PDF</button>
+      <a id="btn-mail" class="btn" href="#" hidden>Email the invite</a>
+    </div>
+    <p class="hint">Prints at 5&nbsp;&times;&nbsp;7&nbsp;inches. PNG exports at 2000&nbsp;&times;&nbsp;2800&nbsp;px (300&nbsp;dpi).</p>
+  </section>
+
+</main>
+
+<div id="toast" class="toast" role="status" aria-live="polite"></div>
+
+<script type="module" src="src/app.js"></script>
+</body>
+</html>
